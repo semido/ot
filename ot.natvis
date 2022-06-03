@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+<Type Name="OpDescriptor">
+    <DisplayString> {rev}, {pos}, {value}, {typ}, {cid} </DisplayString>
+</Type>
+
+<!--
+<Type Name="std::vector&lt;*&gt;">
+  <DisplayString>{(void*)this},  size={_Mylast - _Myfirst} </DisplayString>
+    <Expand>
+        <Item Name="[size]" ExcludeView="simple">_Mylast - _Myfirst</Item>
+        <Item Name="[capacity]" ExcludeView="simple">_Myend - _Myfirst</Item>
+        <ArrayItems>
+          <Size>_Mylast - _Myfirst</Size>
+          <ValuePointer>_Myfirst</ValuePointer>
+        </ArrayItems>
+    </Expand>
+</Type>
+-->
+
+</AutoVisualizer>

@@ -1,0 +1,47 @@
+ops created: m ops per n clients
+одна операция посылается от клиента к серверу
+  пока она не принята назад, больше не посылаем
+одновременные операции трансформируются [n*n*m*m/2]
+  по одной отсылаются всем назад [n*n*m]
+клиент принимает операцию
+  если своя, убирает ее из буфера
+  если чужая, то применяет ее поверх всех в буфере [n*m*m*n/2]
+  все операции в буфере (except sent) трансформируются на эту операцию [n*m*m*n/2]
+
+create op: 1op per client [n]
+each client sends 1 op to server [n]
+  do not create next op until finish this processing
+server waits for n ops from all clients
+server sorts and transforms all recieved ops [n*n/2]
+rev+=n
+server sends rev & all transformed ops to all clients [n*n]
+client recieves transformed ops from server, each gets n [n*n]
+for each op
+  if not own op: transform it over the last own, apply
+  else: drop last own, do not transfer any more, just apply
+
+clienta : A
+clientb : B
+
+A, B' =B(A)
+
+a: A already applied
+A --> drop
+B' --> apply
+
+b: B already applied
+A --> apply A'=A(B)
+B' --> drop
+
+B, A' =A(B)
+
+a: A already applied
+B --> B(A)
+A' --> drop
+
+b: B already applied
+B --> drop
+A' --> apply
+
+A B(A C(B* D(C*
+C A(C B*(C . D*
