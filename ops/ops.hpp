@@ -114,15 +114,16 @@ public:
       });
   }
 
-  // Transform new op on previously added and applied ops.
-  // Transform existing ops to reflect new op.
+  // Transform new op by previously added and applied ops.
   // It skips existing ops with same cid.
   inline void transformAndPut(OpDescriptor<T>& newop)
   {
-    for (auto& op : *this) {
+    OpPack<T> select;
+    for (auto& op : *this)
+      if (op.cid != newop.cid && op.pos <= newop.pos)
+        select.push_back(op);
+    for (auto& op : select)
       newop.trans(op);
-//      op.trans(newop);
-    }
     push_back(newop);
   }
 
