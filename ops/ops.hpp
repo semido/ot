@@ -120,7 +120,7 @@ public:
   {
     OpPack<T> select;
     for (auto& op : *this)
-      if (op.cid != newop.cid && op.pos <= newop.pos)
+//      if (op.cid != newop.cid && op.pos <= newop.pos)
         select.push_back(op);
     for (auto& op : select)
       newop.trans(op);
