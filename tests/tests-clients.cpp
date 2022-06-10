@@ -50,17 +50,17 @@ protected:
     };
 #if 0
     unsigned cid = 1;
-    put(OpDescriptor<U>{ 0, value++, OpType::insert, cid, 0 });
-    put(OpDescriptor<U>{ 3, value++, OpType::update, cid, 1 });
+    put(OpDescriptor<U>{ OpType::insert, 0, value++, cid, 0 });
+    put(OpDescriptor<U>{ OpType::update, 3, value++, cid, 1 });
     cid = 2;
-    put(OpDescriptor<U>{ 1, value++, OpType::insert, cid, 0 });
-    put(OpDescriptor<U>{ 4, value++, OpType::insert, cid, 1 });
+    put(OpDescriptor<U>{ OpType::insert, 1, value++, cid, 0 });
+    put(OpDescriptor<U>{ OpType::insert, 4, value++, cid, 1 });
 #else
     std::uniform_int_distribution<short> typ(1, 3);
     for (unsigned cid = 1; cid < datas.size(); cid++) {
       for (unsigned i = 0; i < opsPerRound; i++) {
         std::uniform_int_distribution<unsigned> pos(0, (unsigned)datas[cid].size());
-        OpDescriptor<U> op(pos(gen), value++, (OpType)typ(gen), cid, rev + i);
+        OpDescriptor<U> op((OpType)typ(gen), pos(gen), value++, cid, rev + i);
         if (datas[cid].empty())
           op.typ = OpType::insert;
         if (op.pos >= datas[cid].size())
@@ -71,13 +71,30 @@ protected:
 #endif
   }
 
+  void makeLocalOps1(std::vector<OpPack<U>>& packs, unsigned r, unsigned opsPerRound)
+  {
+    unsigned rev = r * opsPerRound;
+
+    auto put = [&](auto op)
+    {
+      packs[op.cid] << op; // Own client's pack.
+      states[op.cid] << op; // Apply to own state. Avoid re-order.
+      packs.front() << op; // Send to server :)
+    };
+    unsigned cid = 1;
+    put(OpDescriptor<U>{ OpType::insert, 0, value++, cid, 0 });
+    put(OpDescriptor<U>{ OpType::update, 3, value++, cid, 1 });
+    cid = 2;
+    put(OpDescriptor<U>{ OpType::insert, 1, value++, cid, 0 });
+    put(OpDescriptor<U>{ OpType::insert, 4, value++, cid, 1 });
+  }
+
   void applyFromOther(const OpPack<U>& srcPack, OpPack<U>& dstPack, unsigned cid)
   {
     for (auto op : srcPack) {
       if (op.cid == cid)
         continue; // Own op already applied and present in pack.
-      dstPack.transformAndPut(op);
-      states[cid] << op;
+      states[cid].apply(dstPack, op);
     }
   }
 
@@ -86,29 +103,39 @@ protected:
     std::vector<OpPack<U>> packs(states.size());
     makeLocalOps(packs, r, opsPerRound);
     for (unsigned cid = 1; cid < states.size(); cid++)
-      applyFromOther(packs.front(), packs[cid], cid);
-    packs.front().transAll();
-    states.front() << packs.front();
+      states[cid].apply(packs[cid], packs.front());
+    states.front().apply(packs.front());
   }
 
   void run(unsigned clients, unsigned initialSize, unsigned rounds, unsigned opsPerRound, bool checkEachRound = false)
   {
     init(clients, initialSize);
-    //gen.seed(0); // Make fixed sequence for now.
+    gen.seed(0); // Make fixed sequence for now.
     for (unsigned r = 0; r < rounds; r++) {
       round(r, opsPerRound);
       if (checkEachRound)
         checkStates();
     }
   }
+
+  void runFixed(unsigned clients, unsigned initialSize, unsigned opsPerRound)
+  {
+    init(clients, initialSize);
+    gen.seed(0); // Make fixed sequence for now.
+    std::vector<OpPack<U>> packs(states.size());
+    makeLocalOps1(packs, 1, opsPerRound);
+    for (unsigned cid = 1; cid < states.size(); cid++)
+      states[cid].apply(packs[cid], packs.front());
+    states.front().apply(packs.front());
+  }
 };
 
 using ConcurentClientsMergeBy1Test = ConcurentClients<std::vector<U>>;
 
-TEST_F(ConcurentClientsMergeBy1Test, DISABLED_MyPain) {
+TEST_F(ConcurentClientsMergeBy1Test, MyPain) {
   // ???
   // Run: num of clients, num of elements, rounds, ops created in one round.
-  run(2, 5, 1, 2);
+  runFixed(2, 5, 2);
   checkStates();
 }
 
@@ -119,24 +146,29 @@ TEST_F(ConcurentClientsMergeBy1Test, Trivial) {
   checkStates();
 }
 
+TEST_F(ConcurentClientsMergeBy1Test, Fixed1) {
+  run(2, 10, 10, 1);
+  checkStates();
+}
+
 TEST_F(ConcurentClientsMergeBy1Test, Continious) {
   // 20 clients 1000 steps. 1by1.
   // Run: num of clients, num of elements, rounds, ops created in one round.
-  run(9, 10, 1, 1, true);
-  //checkStates();
+  run(20, 10, 1000, 1);
+  //run(9, 10, 1, 1);
+  checkStates();
 }
 
-TEST_F(ConcurentClientsMergeBy1Test, DISABLED_ConcurentPackets) {
+TEST_F(ConcurentClientsMergeBy1Test, ConcurentPackets) {
   // 20 clients sending packets with 10 ops.
   // Run: num of clients, num of elements, rounds, ops created in one round.
   run(20, 10, 100, 10);
   checkStates();
 }
 
-
 using ConcurentClientsIgushTest = ConcurentClients<IgushArray<U>>;
 
-TEST_F(ConcurentClientsIgushTest, DISABLED_Real) {
+TEST_F(ConcurentClientsIgushTest, Real) {
   // Conditions more or less from the task.
   // Run: num of clients, num of elements, rounds, ops created in one round.
   run(20, 10*1000*1000, 20, 10);

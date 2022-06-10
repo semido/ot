@@ -38,34 +38,34 @@ void RunConcurentClientsOptimistic(std::vector<C>& datas, unsigned initialSize, 
     };
 #if 0
     unsigned cid = 1;
-    put(OpDescriptor<U>{ 0, value++, OpType::insert, cid, 0 });
-    put(OpDescriptor<U>{ 3, value++, OpType::update, cid, 1 });
+    put(OpDescriptor<U>{ OpType::insert, 0, value++, cid, 0 });
+    put(OpDescriptor<U>{ OpType::update, 3, value++, cid, 1 });
     cid = 2;
-    put(OpDescriptor<U>{ 1, value++, OpType::insert, cid, 0 });
-    put(OpDescriptor<U>{ 4, value++, OpType::insert, cid, 1 });
+    put(OpDescriptor<U>{ OpType::insert, 1, value++, cid, 0 });
+    put(OpDescriptor<U>{ OpType::insert, 4, value++, cid, 1 });
 #else
     unsigned rev = r * opsPerRound;
     for (unsigned cid = 1; cid < states.size(); cid++) {
       for (unsigned i = 0; i < opsPerRound; i++) {
         std::uniform_int_distribution<unsigned> dispos(0, (unsigned) states[cid].get().size());
-        // OpDescriptor: pos, value, optype, cid (must be concurrent/distinct), revision
-        put(OpDescriptor<U>{ dispos(gen), value++, (OpType)disot(gen), cid, rev + i });
+        put(OpDescriptor<U>{ (OpType)disot(gen), dispos(gen), value++, cid, rev + i });
       }
-      states[cid] << packs[cid]; // Apply to own state.
     }
 #endif
     for (int cid = 1; cid < states.size(); cid++) {
+#if 0
       auto& clientPack = packs[cid];
       for (unsigned i = 0; i < pack0.size(); i++) {
         auto op = pack0[i];
         if (op.cid == cid)
           continue; // Own op already applied and present in pack.
-        clientPack.transformAndPut(op);
-        states[cid] << op;
+        states[cid].apply(clientPack, op);
       }
+#else
+      states[cid].apply(packs[cid], pack0);
+#endif
     }
-    pack0.transAll();
-    states.front() << pack0;
+    states.front().apply(pack0);
   }
 }
 

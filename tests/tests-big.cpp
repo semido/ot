@@ -25,16 +25,15 @@ TEST(Transformations, BigVectorStateCP2) {
     for (auto a = OpType::insert; a < OpType::thelast; ((char&)a)++) {
       for (auto b = OpType::insert; b < OpType::thelast; ((char&)b)++) {
         for (auto c = OpType::insert; c < OpType::thelast; ((char&)c)++) {
-          // pos, value, optype, cid (must be concurrent/distinct)
-          OpDescriptor<U> opA{ dispos(gen) % state1.get().size(), value++, a, 1 };
-          OpDescriptor<U> opB{ dispos(gen) % state1.get().size(), value++, b, 2 };
-          OpDescriptor<U> opC{ dispos(gen) % state1.get().size(), value++, c, 3 };
+          OpDescriptor<U> opA{ a, dispos(gen) % state1.get().size(), value++, 1 };
+          OpDescriptor<U> opB{ b, dispos(gen) % state1.get().size(), value++, 2 };
+          OpDescriptor<U> opC{ c, dispos(gen) % state1.get().size(), value++, 3 };
           OpPack<U> pack1;
-          pack1 << opA << opB << opC << OpPack<U>::transform;
-          state1 << pack1;
+          pack1 << opA << opB << opC;
+          state1.apply(pack1);
           OpPack<U> pack2;
-          pack2 << opB << opA << opC << OpPack<U>::transform;
-          state2 << pack2;
+          pack2 << opB << opA << opC;
+          state2.apply(pack2);
 //          ASSERT_TRUE(StateEq(state1.get(), state2.get())) << "States not equal, CP2/TP2 failed: " << opA.str() << " / " << opB.str() << " / " << opC.str();
         }
       }
@@ -68,16 +67,14 @@ void BigStateRandom(C& data1, C& data2, unsigned initialSize, unsigned rounds)
   for (unsigned r = 0; r < rounds; r++) {
     OpPack<U> pack1;
     for (unsigned i = 0; i < 10; i++) {
-      // pos, value, optype, cid (must be concurrent/distinct)
-      OpDescriptor<U> op{ dispos(gen) % state1.get().size(), value++, (OpType)diso(gen), i+1 };
+      OpDescriptor<U> op{ (OpType)diso(gen), dispos(gen) % state1.get().size(), value++, i+1 };
       pack1 << op;
     }
     OpPack<U> pack2 = pack1;
-    pack1 << OpPack<U>::transform;
-    pack2 << OpPack<U>::sort_transform;
+    pack2.orderPos();
 
-    state1 << pack1;
-    state2 << pack2;
+    state1.apply(pack1);
+    state2.apply(pack2);
   }
 }
 

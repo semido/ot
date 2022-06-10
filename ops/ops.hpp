@@ -20,12 +20,12 @@ struct OpDescriptor
   unsigned pos = 0;
   T value;
   OpType typ = OpType::nothing;
-  CID cid = 0; // Client drops its own op and do not trans on that later received ops.
+  CID cid = 0;
 
   OpDescriptor() = default;
 
-  OpDescriptor(unsigned p, const T& v, OpType t, unsigned c, unsigned r=0) :
-    pos(p), value(v), typ(t), cid((CID)c), rev(r) {}
+  OpDescriptor(OpType t, unsigned p, const T& v, unsigned c, unsigned r=0) :
+    typ(t), pos(p), value(v), cid((CID)c), rev(r) {}
 
   inline OpDescriptor operator()(const OpDescriptor<T>& pre) const
   {
@@ -34,6 +34,7 @@ struct OpDescriptor
     return newop;
   }
 
+  // Transform this op as concurrent to consider an effect of pre op.
   inline void trans(const OpDescriptor<T>& pre)
   {
     if (pos < pre.pos || cid == pre.cid || pre.typ == OpType::nothing)
@@ -42,8 +43,8 @@ struct OpDescriptor
       //P = check cid; 0 = make nothing; . = as is
       /// i d u (pre)
       //i P . .
-      //d > 0 .
-      //u > 0 P
+      //d + 0 .
+      //u + 0 P
       if (pre.typ == OpType::remove) {
         if (typ != OpType::insert)
           typ = OpType::nothing;
@@ -57,13 +58,57 @@ struct OpDescriptor
         return; // higher priority inserts before prev insert
       }
     }
-    // pos > pre.pos
+    // pos > pre.pos || pos == pre.pos && pre.typ == insert
     if (pre.typ == OpType::remove)
       pos--;
     if (pre.typ == OpType::insert)
       pos++;
     return;
   }
+
+  // Transform this applied op to consider an effect of later subsequent op.
+  // That affects new op addition in pack.transformAndPut.
+  // Ops with same cid are already subsequent.
+  inline void transApplied(const OpDescriptor<T>& next)
+  {
+    if (pos < next.pos || cid == next.cid || next.typ == OpType::nothing)
+      return;
+    if (pos == next.pos) {
+      if (next.typ != OpType::insert)// || typ == OpType::remove)
+        return;
+    }
+    if (next.typ == OpType::remove)
+      pos--;
+    if (next.typ == OpType::insert)
+      pos++;
+    return;
+  }
+
+/*   WIP
+  // Transform this op to exclude an effect of 'pre' op with the same cid,
+  // i.e. make this op concurrent to 'pre' instead of being subsequent.
+  // This is not applicable to 'nothing' op created from a concurrent state by 'trans' func.
+  inline void reverse(const OpDescriptor<T>& pre)
+  {
+    assert(cid == pre.cid); // This is probably dangerous to reverse ops from different clients.
+    if (pos < pre.pos || pre.typ == OpType::nothing)
+      return;
+    if (pos == pre.pos) {
+      if (pre.typ == OpType::remove) {
+        pos++;
+        return;
+      }
+      if (typ == OpType::update && pre.typ == OpType::update)
+        ; // TODO
+    }
+    // pos > pre.pos
+    if (pre.typ == OpType::remove)
+      pos++;
+    if (pre.typ == OpType::insert)
+      pos--;
+    return;
+  }
+*/
 
   inline bool operator==(const OpDescriptor<T>& op) const
   {
@@ -74,30 +119,22 @@ struct OpDescriptor
 
   inline std::string str() const
   {
-    return std::to_string(pos) + ", " + std::to_string(value) + ", " + std::to_string((int)typ) + ", " + std::to_string(cid) + ", " + std::to_string(rev);
+    const std::string typName[] = { "n", "I", "D", "U" };
+    return typName[(int)typ] + "[" + std::to_string(pos) + "]=" + std::to_string(value) + " c" + std::to_string(cid) + " r" + std::to_string(rev);
   }
 };
 // Provident communication protocol must skip unused/optional fields depending on 'op'.
 
-// Order concurrent ops to minimize transformation 
-// then transform all.
 template<typename T>
 class OpPack : public std::vector<OpDescriptor<T>>
 {
   bool transformed = false;
 public:
-  static const bool transform = false;
-  static const bool sort_transform = true;
 
   inline OpPack& operator <<(const OpDescriptor<T>& op)
   {
     push_back(op);
     return *this;
-  }
-
-  inline void operator <<(bool sort)
-  {
-    transAll(sort);
   }
 
   inline void orderPos()
@@ -115,18 +152,21 @@ public:
   }
 
   // Transform new op by previously added and applied ops.
-  // It skips existing ops with same cid.
+  // Then add newop to the pack to affect future ops.
+  // NB op.trans skips same cid.
   inline void transformAndPut(OpDescriptor<T>& newop)
   {
-    OpPack<T> select;
-    for (auto& op : *this)
-//      if (op.cid != newop.cid && op.pos <= newop.pos)
-        select.push_back(op);
-    for (auto& op : select)
+    for (auto& op : *this) {
       newop.trans(op);
+      op.transApplied(newop);
+    }
     push_back(newop);
+    orderPos();
   }
-
+/*
+  // Making transAll before applying to the state is not working,
+  // because previous ops must be applied and only after that transformed on newop.
+ 
   // Transform all concurrent ops of the pack.
   // It assumes ops added concurrently, but not applied on the state
   // and thus don't know about each other yet.
@@ -136,19 +176,17 @@ public:
       return;
     if (sort)
       orderRev();
+#if 1
+    OpPack newpack;
+    for (auto& op : *this)
+      newpack.transformAndPut(op);
+    *this = std::move(newpack);
+#else
     for (auto i = begin() + 1; i < end(); i++)
       for (auto j = begin(); j < i; j++)
         i->trans(*j);
+#endif
     transformed = true;
   }
-
-  inline bool drop(const OpDescriptor<T>& op)
-  {
-    for (auto i = begin(); i < end(); i++)
-      if (op == *i) {
-        erase(i);
-        return true;
-      }
-    return false;
-  }
+*/
 };

@@ -23,17 +23,40 @@ public:
 
   inline const C& get() const { return data; }
 
+  // Do not transform, just apply subsequent ops. Op must be transformed if there was a concurrence.
   inline State& operator << (const OpDescriptor<T>& op)
   {
     apply(op);
     return *this;
   }
 
-  inline State& operator << (const OpPack<T>& pack)
+  // Apply concurrent ops of the pack.
+  // Ops with same cid assumed sequential, should not be reordered or transformed in its subset.
+  inline void apply(const OpPack<T>& pack)
   {
-    for (unsigned i = 0; i < pack.size(); i++)
-      apply(pack[i]);
-    return *this;
+    OpPack<T> appliedPack;
+    for (auto op : pack)
+      apply(appliedPack, op);
+  }
+
+  // Apply concurrent ops of the pack with consideration of some applied ops.
+  // Ops with same cid assumed sequential, should not be reordered or transformed in its subset.
+  inline void apply(OpPack<T>& appliedPack, const OpPack<T>& srcPack)
+  {
+    for (auto op : srcPack) {
+      if (appliedPack.size() && appliedPack[0].cid == op.cid)
+        continue; // Own op. Assume it's already applied and present in pack.
+      apply(appliedPack, op);
+    }
+  }
+
+  // Transform op considering an effect of previous ops from the pack.
+  // Also transform the pack to reflect the fact of the state update.
+  // Apply op to state.
+  inline void apply(OpPack<T>& pack, OpDescriptor<T> op)
+  {
+    pack.transformAndPut(op);
+    apply(op);
   }
 
   inline void apply(const OpDescriptor<T>& op)
