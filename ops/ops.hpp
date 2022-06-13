@@ -1,8 +1,13 @@
 #pragma once
 
+#include <cassert>
 #include <algorithm>
 #include <string>
 #include <vector>
+
+#ifndef allof
+#define allof(c) (c).begin(), (c).end()
+#endif
 
 enum class OpType : char
 {
@@ -17,7 +22,8 @@ template<typename T, typename CID = unsigned>
 struct OpDescriptor
 {
   unsigned rev = 0;
-  unsigned pos = 0;
+  unsigned pos = 0; // Concurrent pos
+  unsigned posser = UINT_MAX; // Serial pos considering other concurrent ops.
   T value;
   OpType typ = OpType::nothing;
   CID cid = 0;
@@ -25,7 +31,7 @@ struct OpDescriptor
   OpDescriptor() = default;
 
   OpDescriptor(OpType t, unsigned p, const T& v, unsigned c, unsigned r=0) :
-    typ(t), pos(p), value(v), cid((CID)c), rev(r) {}
+    typ(t), pos(p), posser(p), value(v), cid((CID)c), rev(r) {}
 
   inline OpDescriptor operator()(const OpDescriptor<T>& pre) const
   {
@@ -37,7 +43,7 @@ struct OpDescriptor
   // Transform this op as concurrent to consider an effect of pre op.
   inline void trans(const OpDescriptor<T>& pre)
   {
-    if (pos < pre.pos || cid == pre.cid || pre.typ == OpType::nothing)
+    if (pos < pre.pos || pre.typ == OpType::nothing)
       return;
     if (pos == pre.pos) {
       //P = check cid; 0 = make nothing; . = as is
@@ -54,17 +60,18 @@ struct OpDescriptor
         typ = OpType::nothing; // higher priority wins, lower dropped
         return;
       }
-      if (typ == OpType::insert && pre.typ == OpType::insert && cid < pre.cid) {
+      if (typ == OpType::insert && pre.typ == OpType::insert && cid <= pre.cid) {
         return; // higher priority inserts before prev insert
       }
     }
     // pos > pre.pos || pos == pre.pos && pre.typ == insert
     if (pre.typ == OpType::remove)
-      pos--;
+      posser--;
     if (pre.typ == OpType::insert)
-      pos++;
+      posser++;
     return;
   }
+/* Failed to make it working.
 
   // Transform this applied op to consider an effect of later subsequent op.
   // That affects new op addition in pack.transformAndPut.
@@ -84,13 +91,15 @@ struct OpDescriptor
     return;
   }
 
-/*   WIP
+*/
+
   // Transform this op to exclude an effect of 'pre' op with the same cid,
   // i.e. make this op concurrent to 'pre' instead of being subsequent.
   // This is not applicable to 'nothing' op created from a concurrent state by 'trans' func.
   inline void reverse(const OpDescriptor<T>& pre)
   {
-    assert(cid == pre.cid); // This is probably dangerous to reverse ops from different clients.
+    assert(cid == pre.cid); // It is probably not ready to reverse ops from different clients.
+    assert(pos == posser);
     if (pos < pre.pos || pre.typ == OpType::nothing)
       return;
     if (pos == pre.pos) {
@@ -108,7 +117,6 @@ struct OpDescriptor
       pos--;
     return;
   }
-*/
 
   inline bool operator==(const OpDescriptor<T>& op) const
   {
@@ -140,7 +148,10 @@ public:
   inline void orderPos()
   {
     std::sort(begin(), end(), [](auto& a, auto& b) {
-      return a.pos < b.pos || a.pos == b.pos && a.cid < b.cid;
+      return a.value < b.value;
+//         a.pos < b.pos || 
+//         a.pos == b.pos && a.cid < b.cid || 
+//         a.pos == b.pos && a.cid == b.cid && a.rev < b.rev;
       });
   }
 
@@ -158,10 +169,8 @@ public:
   {
     for (auto& op : *this) {
       newop.trans(op);
-      op.transApplied(newop);
     }
     push_back(newop);
-    orderPos();
   }
 /*
   // Making transAll before applying to the state is not working,

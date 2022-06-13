@@ -20,7 +20,7 @@ TEST(Transformations, CP1) {
         OpDescriptor<U> opB{ b, pos + shift, value++, 2 };
         state1 << opA << opB(opA);
         state2 << opB << opA(opB);
-        ASSERT_TRUE(StateEq(state1.get(), state2.get())) << "States not equal, CP1/TP1 failed: " << opA.str() << " / " << opB.str();
+        ASSERT_TRUE(StateEq(data1, data2)) << "States not equal, CP1/TP1 failed: " << opA.str() << " / " << opB.str();
       }
     }
   }
@@ -36,17 +36,19 @@ TEST(Transformations, CP2) {
   unsigned pos = 3;
   U value = 0;
   for (int shift = -1; shift < 2; shift++) {
-    for (auto a = OpType::nothing; a < OpType::thelast; ((char&)a)++) {
-      for (auto b = OpType::nothing; b < OpType::thelast; ((char&)b)++) {
-        for (auto c = OpType::insert; c < OpType::thelast; ((char&)c)++) {
-          OpDescriptor<U> opA{ a, pos, value++, 1 };
-          OpDescriptor<U> opB{ b, pos + shift, value++, 2 };
-          OpDescriptor<U> opC{ c, pos + shift + 2, value++, 3 };
-          auto opBA = opB(opA);
-          state1 << opA << opBA << opC(opA)(opBA);
-          auto opAB = opA(opB);
-          state2 << opB << opAB << opC(opB)(opAB);
-          ASSERT_TRUE(StateEq(state1.get(), state2.get())) << "States not equal, CP2/TP2 failed: " << opA.str() << " / " << opB.str() << " / " << opC.str();
+    for (int shiftC = -1; shiftC < 3; shiftC++) {
+      for (auto a = OpType::nothing; a < OpType::thelast; ((char&)a)++) {
+        for (auto b = OpType::nothing; b < OpType::thelast; ((char&)b)++) {
+          for (auto c = OpType::insert; c < OpType::thelast; ((char&)c)++) {
+            OpDescriptor<U> opA{ a, pos, value++, 1 };
+            OpDescriptor<U> opB{ b, pos + shift, value++, 2 };
+            OpDescriptor<U> opC{ c, pos + shift + shiftC, value++, 3 };
+            auto opBA = opB(opA);
+            state1 << opA << opBA << opC(opA)(opBA);
+            auto opAB = opA(opB);
+            state2 << opB << opAB << opC(opB)(opAB);
+            ASSERT_TRUE(StateEq(data1, data2)) << "States not equal, CP2/TP2 failed: " << opA.str() << " / " << opB.str() << " / " << opC.str();
+          }
         }
       }
     }
@@ -75,7 +77,7 @@ TEST(Transformations, CP2Packer) {
             OpPack<U> pack2;
             pack2 << opB << opA << opC;
             state2.apply(pack2);
-            ASSERT_TRUE(StateEq(state1.get(), state2.get())) << "States not equal, CP2/TP2 failed: " << opA.str() << " / " << opB.str() << " / " << opC.str();
+            ASSERT_TRUE(StateEq(data1, data2)) << "States not equal, CP2/TP2 failed: " << opA.str() << " / " << opB.str() << " / " << opC.str();
           }
         }
       }

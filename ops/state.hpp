@@ -16,12 +16,24 @@ bool StateEq(const V& v1, const V& v2)
 template<typename C>
 class State
 {
-  C& data;
+  C* data = nullptr; // Weak ptr to external data container.
   using T = typename C::value_type;
 public:
-  State(C& v) : data(v) {}
+  State() = default;
+  State(C& v) : data(&v) {}
 
-  inline const C& get() const { return data; }
+  inline void set(C* d) { data = d; }
+
+  inline unsigned size() const { return data ? (unsigned) data->size() : 0; }
+
+  inline std::string str() const
+  {
+    assert(data);
+    std::string s = "[" + std::to_string(data->size()) + "]";
+    for (auto& e : *data)
+      s += " " + std::to_string(e);
+    return s;
+  }
 
   // Do not transform, just apply subsequent ops. Op must be transformed if there was a concurrence.
   inline State& operator << (const OpDescriptor<T>& op)
@@ -31,7 +43,6 @@ public:
   }
 
   // Apply concurrent ops of the pack.
-  // Ops with same cid assumed sequential, should not be reordered or transformed in its subset.
   inline void apply(const OpPack<T>& pack)
   {
     OpPack<T> appliedPack;
@@ -39,19 +50,17 @@ public:
       apply(appliedPack, op);
   }
 
-  // Apply concurrent ops of the pack with consideration of some applied ops.
-  // Ops with same cid assumed sequential, should not be reordered or transformed in its subset.
-  inline void apply(OpPack<T>& appliedPack, const OpPack<T>& srcPack)
+  // Apply concurrent ops of src pack with consideration of some applied ops.
+  inline void applyFromOthers(unsigned cid, OpPack<T>& appliedPack, const OpPack<T>& srcPack)
   {
     for (auto op : srcPack) {
-      if (appliedPack.size() && appliedPack[0].cid == op.cid)
+      if (cid == op.cid)
         continue; // Own op. Assume it's already applied and present in pack.
       apply(appliedPack, op);
     }
   }
 
   // Transform op considering an effect of previous ops from the pack.
-  // Also transform the pack to reflect the fact of the state update.
   // Apply op to state.
   inline void apply(OpPack<T>& pack, OpDescriptor<T> op)
   {
@@ -61,23 +70,24 @@ public:
 
   inline void apply(const OpDescriptor<T>& op)
   {
+    assert(data);
     if (op.typ == OpType::nothing)
       return;
-    if(op.typ == OpType::insert && op.pos >= data.size()) {
-      data.push_back(op.value);
+    if(op.typ == OpType::insert && op.posser >= data->size()) {
+      data->push_back(op.value);
       return;
     }
-    if (data.empty())
+    if (data->empty())
       return;
-    auto pos1 = op.pos; // Bound.
-    if(pos1 >= data.size())
-      pos1 = (unsigned) data.size() - 1;
+    auto pos1 = op.posser; // Bound.
+    if(pos1 >= data->size())
+      pos1 = (unsigned) data->size() - 1;
     if(op.typ == OpType::insert)
-      data.insert(data.begin() + pos1, op.value);
+      data->insert(data->begin() + pos1, op.value);
     else if (op.typ == OpType::remove)
-      data.erase(data.begin() + pos1);
+      data->erase(data->begin() + pos1);
     else if (op.typ == OpType::update)
-      data[pos1] = op.value;
+      (*data)[pos1] = op.value;
     return;
   }
 };

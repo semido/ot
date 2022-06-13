@@ -67,7 +67,7 @@ void BigStateRandom(C& data1, C& data2, unsigned initialSize, unsigned rounds)
   for (unsigned r = 0; r < rounds; r++) {
     OpPack<U> pack1;
     for (unsigned i = 0; i < 10; i++) {
-      OpDescriptor<U> op{ (OpType)diso(gen), dispos(gen) % state1.get().size(), value++, i+1 };
+      OpDescriptor<U> op{ (OpType)diso(gen), dispos(gen) % state1.size(), value++, i+1 };
       pack1 << op;
     }
     OpPack<U> pack2 = pack1;
