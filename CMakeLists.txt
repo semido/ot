@@ -44,5 +44,6 @@ add_executable(ot main.cpp)
 target_sources(ot PRIVATE readme.md)
 
 add_subdirectory(ops)
+add_subdirectory(comm)
 add_subdirectory(utils)
 add_subdirectory(tests)

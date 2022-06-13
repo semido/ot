@@ -39,16 +39,14 @@ Implement concurrent merge algo, which makes sure that actions of several users 
    * cmake --build ./build/${config} --config Release
    * or use ALL_BUILD.vcxproj
 
-#### ToDo
+#### Progress
 
-- Now it supports N clients + server. It creates 1 op per client (N) during a single round. 
+* Support N clients + server. It creates 1 op per client (N) during a single round. 
   Do exchange/sync through the server.
 
-- Next. Generate M ops on N clients. Sync one by one via the server.
+* Generate M ops on N clients. All synced using same package via the server.
 
-- Create class Server with comm interface.
-
-- Create download func.
+* Create Client & Server classes with simple comm interface.
 
 - Use threads.
 

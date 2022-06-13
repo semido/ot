@@ -1,7 +1,9 @@
+#pragma once
+
 #include "ops.hpp"
 
 template<typename V>
-bool StateEq(const V& v1, const V& v2)
+inline bool StateEq(const V& v1, const V& v2)
 {
   if (v1.size() != v2.size())
     return false;
