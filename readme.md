@@ -64,8 +64,10 @@ Options:
 
 * Create Client & Server classes with simple comm interface.
 
-- Make design analisys.
+* To Do
 
-- Use threads.
+  - Make intermediate design analisys.
 
-- Implement offline, i.e. each client works with own update freq.
+  - Use threads.
+
+  - Implement offline, i.e. each client works with own update freq.
