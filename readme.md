@@ -43,7 +43,7 @@ Implement concurrent merge algo, which makes sure that actions of several users 
 
 Main executable runs on initial state of 10,000,000 elements by default.
 Clients are created with little delay, 1 cli in 4 rounds until it makes 20 clients.
-It does 24*60*60 rounds of sync between 20 concurrent clients and the communication server.
+It does 24x60x60 rounds of sync between 20 concurrent clients and the communication server.
 Each client produces 5 ops before push it to the server.
 By default it tests all states once per 30 rounds, which makes notable slowdown.
 
