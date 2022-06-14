@@ -3,7 +3,7 @@
 Implement concurrent merge algo, which makes sure that actions of several users on a common document 
 (with a simple data structure = array of elements) result in all of them eventually seeing the same result locally.
 
-- In the initial state Server holds RGA of 10,000,000 elements. It should still work with an element size 4..64 bytes.
+- In the initial state Server holds an ordered array of 10,000,000 elements. It should still work with an element size 4..64 bytes.
 - At any time a client process can connect, download the current state and start inserting, updating, or deleting numbers 
   (each time choosing a random position and value of the operation) at a speed of around 5 operations per second.
 - There can be up to 20 clients connected at the same time.
@@ -39,6 +39,22 @@ Implement concurrent merge algo, which makes sure that actions of several users 
    * cmake --build ./build/${config} --config Release
    * or use ALL_BUILD.vcxproj
 
+#### Executable and Options
+
+Main executable runs on initial state of 10,000,000 elements by default.
+Clients are created with little delay, 1 cli in 4 rounds until it makes 20 clients.
+It does 24*60*60 rounds of sync between 20 concurrent clients and the communication server.
+Each client produces 5 ops before push it to the server.
+By default it tests all states once per 30 rounds, which makes notable slowdown.
+
+Options:
+  * -c N, Number of clients, def = 20
+  * -s N, Number of elements in the initial state, def = 10,000,000
+  * -r N, Number of rounds, def = 86,400
+  * -o N, Number of ops to make locally before the sync with server, def = 5
+  * -t N, Test the consistency after a num of rounds, def = 30
+          With -t 0, it does a test in 1,800 rounds.
+
 #### Progress
 
 * Support N clients + server. It creates 1 op per client (N) during a single round. 
@@ -48,8 +64,8 @@ Implement concurrent merge algo, which makes sure that actions of several users 
 
 * Create Client & Server classes with simple comm interface.
 
-- Use threads.
-
 - Make design analisys.
+
+- Use threads.
 
 - Implement offline, i.e. each client works with own update freq.
