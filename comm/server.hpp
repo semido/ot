@@ -31,7 +31,7 @@ public:
   // Initiate server state update followed by all client updates.
   inline void update()
   {
-    OpPack<U> temp; // For debugging.
+    OpPack<T> temp; // For debugging.
     state.applyFromOthers(0, temp, accum);
     rev++;
     for (auto pc : clients)
@@ -44,12 +44,9 @@ protected:
 
   inline auto clone(Client<C>* pc)
   {
+    assert(datas);
     clients.push_back(pc); // Store ref to send updates.
-    datas->resize(datas->size() + 1); // N.B. Will cause a failure without proper reserve, because state stores the address.
-    datas->back().reserve(datas->front().size());
-    for (auto x : datas->front()) {
-      datas->back().push_back(x);
-    }
+    datas->emplace_back(datas->front()); // N.B. Will cause a failure without proper reserve, because state stores the address.
     return std::make_tuple((unsigned)datas->size() - 1, rev, &datas->back());
   }
 

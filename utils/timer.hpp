@@ -9,7 +9,7 @@ public:
   {
     t0 = clock::now();
   }
-  operator double()
+  operator double() const
   {
     auto t1 = clock::now();
     return std::chrono::duration<double>(t1 - t0).count();

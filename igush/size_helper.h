@@ -33,7 +33,7 @@ size_t size_helper(InputIterator first, InputIterator last, std::input_iterator_
 template <class InputIterator>
 size_t data_size(InputIterator first, InputIterator last)
 {
-    return size_helper(first, last, typename std::iterator_traits<InputIterator>::iterator_category);
+    return size_helper(first, last, std::iterator_traits<InputIterator>::iterator_category);
 }
 
 #endif

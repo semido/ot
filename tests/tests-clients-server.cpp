@@ -31,7 +31,7 @@ protected:
     }
   }
 
-  inline void checkStates()
+  inline void checkStates() const
   {
     for (unsigned cid = 1; cid < datas.size(); cid++) {
       ASSERT_TRUE(StateEq(datas.front(), datas[cid]));
@@ -101,7 +101,7 @@ TEST_F(AConcurentClientServerVTest, Continious) {
 TEST_F(AConcurentClientServerVTest, ConcurentPackets) {
   // 20 clients sending packets with 10 ops. 100 rounds.
   // Run: num of clients, num of elements, rounds, ops created in one round.
-  run(20, 100000, 100, 10);
+  run(20, 100000, 100, 5);
   checkStates();
 }
 

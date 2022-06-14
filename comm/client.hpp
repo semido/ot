@@ -25,7 +25,7 @@ public:
   
   inline void connect(Server<C>& s)
   {
-    assert(!server);
+    assert(!connected());
     auto [c, r, buf] = s.clone(this);
     server = &s;
     cid = c;
@@ -33,9 +33,11 @@ public:
     state.set(buf);
   }
 
+  inline bool connected() const { return server != nullptr; }
+
   inline void makeLocalOps(OpPack<T>& pack)
   {
-    assert(server);
+    assert(connected());
     assert(applied.empty()); // Assume applied is already sent to server and used for update from server!
     for (auto& op : pack) { // Make sure ops are properly signed.
       op.cid = cid;
@@ -56,8 +58,7 @@ protected:
 
   inline void updateFromServer(unsigned r, const OpPack<T>& pack)
   {
-    assert(server);
-    assert(servRev + 1 == r);
+    assert(connected());
     servRev = r;
     state.applyFromOthers(cid, applied, pack);
     applied.clear();

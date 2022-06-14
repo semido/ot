@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include <climits>
 
 #ifndef allof
 #define allof(c) (c).begin(), (c).end()
@@ -141,13 +142,13 @@ public:
 
   inline OpPack& operator <<(const OpDescriptor<T>& op)
   {
-    push_back(op);
+    this->push_back(op);
     return *this;
   }
 
   inline void orderPos()
   {
-    std::sort(begin(), end(), [](auto& a, auto& b) {
+    std::sort(this->begin(), this->end(), [](auto& a, auto& b) {
       return a.value < b.value;
 //         a.pos < b.pos || 
 //         a.pos == b.pos && a.cid < b.cid || 
@@ -157,7 +158,7 @@ public:
 
   inline void orderRev()
   {
-    std::sort(begin(), end(), [](auto& a, auto& b) {
+    std::sort(this->begin(), this->end(), [](auto& a, auto& b) {
       return a.rev < b.rev || a.rev == b.rev && a.cid < b.cid;
       });
   }
@@ -170,7 +171,7 @@ public:
     for (auto& op : *this) {
       newop.trans(op);
     }
-    push_back(newop);
+    this->push_back(newop);
   }
 /*
   // Making transAll before applying to the state is not working,

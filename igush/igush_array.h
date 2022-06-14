@@ -118,10 +118,10 @@ public:
     typedef T value_type;
     typedef const T const_value_type;
 
-    typedef typename Alloc::value_type& reference;
-    typedef typename const reference const_reference;
-    typedef typename std::allocator_traits<Alloc>::pointer pointer;
-    typedef typename std::allocator_traits<Alloc>::const_pointer const_pointer;
+    using reference = typename Alloc::value_type&;
+    using const_reference = const reference;
+    using pointer = typename std::allocator_traits<Alloc>::pointer;
+    using const_pointer = typename std::allocator_traits<Alloc>::const_pointer;
 
     template <class U, class IgushArrayPtr, class VecIter, class DeqIter>
     class IgushArrayIterator {
@@ -188,13 +188,14 @@ public:
     typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
     typedef std::reverse_iterator<iterator> reverse_iterator;
     
-    explicit IgushArray(const Alloc& a = Alloc());
+    IgushArray(const Alloc& a = Alloc());
     explicit IgushArray(size_type n, const T& value = T(), const Alloc& a = Alloc());
     template <class InputIterator>
     IgushArray(InputIterator first, InputIterator last, const Alloc& a = Alloc());
-    IgushArray(IgushArray<T, Alloc>& ia);
+    IgushArray(IgushArray& ia);
+    IgushArray(IgushArray&& ia) { this->swap(ia); }
     ~IgushArray();
-    void operator=(IgushArray<T, Alloc>& ia) { IgushArray<T, Alloc>(ia).swap(*this); }
+    void operator=(IgushArray& ia) { IgushArray(ia).swap(*this); }
     
     inline bool empty() const
         { return (_v->size() == 1 && _v->back()->empty()); }
@@ -296,7 +297,7 @@ IgushArray<T, Alloc>::IgushArrayIterator<U, IgushArrayPtr, VecIter, DeqIter>::op
         incr -= ((*_vec_it)->end() - _deq_it);
         ++_vec_it;
 
-        typename DeqTPtrVec::size_type incr_vec = (DeqTPtrVec::size_type) floor(incr/_ia->_deq_size);
+        typename DeqTPtrVec::size_type incr_vec = (typename DeqTPtrVec::size_type) floor(incr/_ia->_deq_size);
         if (_vec_it + incr_vec >= _ia->_v->end())
             incr_vec = _ia->_v->end() - _vec_it - 1;
 
@@ -334,7 +335,7 @@ IgushArray<T, Alloc>::IgushArrayIterator<U, IgushArrayPtr, VecIter, DeqIter>::op
         decr -= (_deq_it - (*_vec_it)->begin() + 1);
         --_vec_it;
 
-        typename DeqTPtrVec::size_type decr_vec = (DeqTPtrVec::size_type) floor(decr/_ia->_deq_size);
+        typename DeqTPtrVec::size_type decr_vec = (typename DeqTPtrVec::size_type) floor(decr/_ia->_deq_size);
         if (_vec_it - decr_vec < _ia->_v->begin())
             decr_vec = _vec_it - _ia->_v->begin();
 
@@ -508,7 +509,7 @@ template <class T, class Alloc>
 typename IgushArray<T, Alloc>::reference IgushArray<T, Alloc>::operator[](size_type n)
 
 {
-    typename DeqTPtrVec::size_type vec_n = (DeqTPtrVec::size_type) floor(n/_deq_size);
+    typename DeqTPtrVec::size_type vec_n = (typename DeqTPtrVec::size_type) floor(n/_deq_size);
     DeqTPtr deq_ptr = _v->operator[](vec_n);
     return deq_ptr->operator[](n-vec_n*_deq_size);
 }
@@ -516,7 +517,7 @@ typename IgushArray<T, Alloc>::reference IgushArray<T, Alloc>::operator[](size_t
 template <class T, class Alloc>
 typename IgushArray<T, Alloc>::const_reference IgushArray<T, Alloc>::operator[](size_type n) const
 {
-    typename DeqTPtrVec::size_type vec_n = (DeqTPtrVec::size_type) floor(n/_deq_size);
+    typename DeqTPtrVec::size_type vec_n = (typename DeqTPtrVec::size_type) floor(n/_deq_size);
     const DeqTPtr deq_ptr = _v->operator[](vec_n);
     return deq_ptr->operator[](n-vec_n*_deq_size);
 }

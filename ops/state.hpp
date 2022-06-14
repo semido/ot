@@ -22,7 +22,7 @@ class State
   using T = typename C::value_type;
 public:
   State() = default;
-  State(C& v) : data(&v) {}
+  State(C& d) : data(&d) {}
 
   inline void set(C* d) { data = d; }
 
@@ -31,7 +31,7 @@ public:
   inline std::string str() const
   {
     assert(data);
-    std::string s = "[" + std::to_string(data->size()) + "]";
+    std::string s = "[" + std::to_string(size()) + "]";
     for (auto& e : *data)
       s += " " + std::to_string(e);
     return s;
@@ -75,15 +75,15 @@ public:
     assert(data);
     if (op.typ == OpType::nothing)
       return;
-    if(op.typ == OpType::insert && op.posser >= data->size()) {
+    if(op.typ == OpType::insert && op.posser >= size()) {
       data->push_back(op.value);
       return;
     }
-    if (data->empty())
+    if (size() == 0)
       return;
     auto pos1 = op.posser; // Bound.
-    if(pos1 >= data->size())
-      pos1 = (unsigned) data->size() - 1;
+    if(pos1 >= size())
+      pos1 = size() - 1;
     if(op.typ == OpType::insert)
       data->insert(data->begin() + pos1, op.value);
     else if (op.typ == OpType::remove)

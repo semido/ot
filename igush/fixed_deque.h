@@ -38,10 +38,10 @@ public:
     typedef T value_type;
     typedef const T const_value_type;
 
-    typedef typename Alloc::value_type& reference;
-    typedef typename const reference const_reference;
-    typedef typename std::allocator_traits<Alloc>::pointer pointer;
-    typedef typename std::allocator_traits<Alloc>::const_pointer const_pointer;
+    using reference = typename Alloc::value_type&;
+    using const_reference = const reference;
+    using pointer = typename std::allocator_traits<Alloc>::pointer;
+    using const_pointer = typename std::allocator_traits<Alloc>::const_pointer;
 
     template <class U, class FixedDequePtr>
     class FixedDequeIterator {

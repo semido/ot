@@ -2,6 +2,7 @@
 #include "../ops/pstate.hpp"
 #include <gtest/gtest.h>
 #include <random>
+#include <climits>
 
 using U = unsigned;
 
