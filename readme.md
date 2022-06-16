@@ -54,20 +54,3 @@ Options:
   * -o N, Number of ops to make locally before the sync with server, def = 5
   * -t N, Test the consistency after a num of rounds, def = 30
           With -t 0, it does a test in 1,800 rounds.
-
-#### Progress
-
-* Support N clients + server. It creates 1 op per client (N) during a single round. 
-  Do exchange/sync through the server.
-
-* Generate M ops on N clients. All synced using same package via the server.
-
-* Create Client & Server classes with simple comm interface.
-
-* To Do
-
-  - Make intermediate design analisys.
-
-  - Use threads.
-
-  - Implement offline, i.e. each client works with own update freq.
