@@ -39,6 +39,15 @@ public:
     accum.clear();
   }
 
+  inline void clear()
+  {
+    datas = nullptr;
+    clients.clear();
+    rev = 0;
+  }
+
+  inline std::string str() const { return state.str(); }
+
 protected:
   friend class Client<C>;
 

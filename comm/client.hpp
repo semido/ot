@@ -53,6 +53,8 @@ public:
 
   inline unsigned id() const { return cid; }
 
+  inline std::string str() const { return state.str(); }
+
 protected:
   friend class Server<C>;
 

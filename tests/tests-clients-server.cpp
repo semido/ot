@@ -17,9 +17,11 @@ protected:
   typename C::value_type value = 0; // Values for testing. It does not affect the flow, just a little helper.
   std::mt19937 gen;
 
-  inline void init(unsigned clients, unsigned initialSize)
+  inline void init(unsigned nClients, unsigned initialSize)
   {
-    datas.reserve(clients + 1);
+    if (value)
+      return; // Create containers just once.
+    datas.reserve(nClients + 1);
     datas.resize(1);
     datas.front().reserve(initialSize);
     //std::random_device rd;
@@ -29,12 +31,27 @@ protected:
     for (unsigned i = 0; i < initialSize; i++) {
       datas.front().push_back(start+i);
     }
+    clients.reserve(nClients);
+    server.init(&datas);
   }
 
-  inline void checkStates() const
+  inline void reset()
+  {
+    server.clear();
+    auto n = clients.size();
+    clients.clear();
+    datas.resize(1);
+    server.init(&datas);
+    unsigned start = std::max(100U, (unsigned) datas.front().size());
+    for (unsigned i = 0; i < datas.front().size(); i++) {
+      datas.front()[i] = start + i;
+    }
+  }
+
+  inline void checkStates(unsigned seed = 0) const
   {
     for (unsigned cid = 1; cid < datas.size(); cid++) {
-      ASSERT_TRUE(StateEq(datas.front(), datas[cid]));
+      ASSERT_TRUE(StateEq(datas.front(), datas[cid])) << seed;
     }
   }
 
@@ -54,17 +71,15 @@ protected:
       if (p >= client.size())
         p = t == OpType::insert && rev % 2 ? client.size() : 0;
       OpDescriptor<U> op(t, p, value++, client.id(), rev + i);
-      pack << op;
+      if (!pack.isDuplication(op))
+        pack << op;
     }
     return pack;
   }
 
-  void run(unsigned nClients, unsigned initialSize, unsigned rounds, unsigned opsPerRound, bool checkEachRound = false)
+  void run(unsigned nClients, unsigned initialSize, unsigned rounds, unsigned opsPerRound, unsigned seed = 0)
   {
     init(nClients, initialSize);
-    clients.reserve(nClients);
-    server.init(&datas);
-    //gen.seed(0); // Make fixed sequence for now.
     for (unsigned r = 0; r < rounds; r++) {
       if (clients.size() < nClients) { // Each round add another client.
         clients.push_back({}); // Avoid realloc, because server stores the addr.
@@ -75,8 +90,8 @@ protected:
         c.makeLocalOps(pack);
       }
       server.update();
-      if (checkEachRound)
-        checkStates();
+      if (seed)
+        checkStates(seed);
     }
   }
 };
@@ -101,8 +116,18 @@ TEST_F(AConcurentClientServerVTest, Continious) {
 TEST_F(AConcurentClientServerVTest, ConcurentPackets) {
   // 20 clients sending packets with 10 ops. 100 rounds.
   // Run: num of clients, num of elements, rounds, ops created in one round.
-  run(20, 100000, 100, 5);
+  run(20, 10, 100, 20);
   checkStates();
+}
+
+TEST_F(AConcurentClientServerVTest, DISABLED_CatchConcurentPackets) {
+  // Find minimal combination to fail with transformations
+  // Run: num of clients, num of elements, rounds, ops created in one round.
+  for (auto i = 0; i < 1000000; i++) {
+    gen.seed(i);
+    run(5, 10, 3, 4, i);
+    reset();
+  }
 }
 
 using AConcurentClientServerIgushTest = ConcurentClientServerTest<IgushArray<U>>;

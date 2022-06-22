@@ -144,4 +144,19 @@ public:
     }
     this->push_back(newop);
   }
+
+  // For now, we create concurrent local ops.
+  // That makes no sense to duplicate position of del/update for concurrent ops of same client.
+  // It is easy to confuse such case with subsequent local ops, where we say delete several times at the same pos.
+  // Transformation of 2 concurrent dels will just skip the duplication.
+  // NB That's fine to insert concurrently in same pos.
+  inline bool isDuplication(OpDescriptor<T>& newop) const
+  {
+    for (const auto& op : *this) {
+      if (newop.pos != op.pos || newop.typ == OpType::insert && op.typ == OpType::insert)
+        continue;
+      return true;
+    }
+    return false;
+  }
 };

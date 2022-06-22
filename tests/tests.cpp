@@ -26,7 +26,6 @@ TEST(Transformations, CP1) {
   }
 }
 
-// This test does not touch tricky case c.pos < max(a.pos, b.pos)
 TEST(Transformations, CP2) {
   std::vector<U> data1(10, 0);
   State<std::vector<U>> state1(data1);
@@ -84,4 +83,3 @@ TEST(Transformations, CP2Packer) {
     }
   }
 }
-
