@@ -8,12 +8,12 @@ template<typename C>
 class Client;
 
 // Trivial centralized structure holding connections with state modifiers (clients).
-// It updates all states by ending the same package of concurrent ops.
+// It updates all states by sending the same package of concurrent ops.
 // Each state transforms received pack considering local changes.
 template<typename C>
 class Server {
   using T = typename C::value_type;
-  std::vector<C>* datas = nullptr; // Real containers live together to simplify final test/comparison.
+  std::vector<C>* datas = nullptr; // Real containers live together to simplify the test.
   State<C> state; // Server' state applier.
   OpPack<T> accum; // Accumulate from clients before common update.
   std::vector<Client<C>*> clients; // Store refs to send updates.

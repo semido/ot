@@ -1,5 +1,5 @@
 #include "../ops/state.hpp"
-#include "../ops/pstate.hpp"
+#include "../igush/igush_array.h"
 #include <gtest/gtest.h>
 #include <random>
 
